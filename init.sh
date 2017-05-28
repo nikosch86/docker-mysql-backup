@@ -58,7 +58,6 @@ then
 fi
 
 DB_PORT=${MYSQL_PORT:-3306}
-DB_ADDR="${CONTAINER}"
 DB_NAME="${MYSQL_DATABASE}"
 DB_PASS="${MYSQL_ROOT_PASSWORD}"
 
@@ -66,9 +65,8 @@ echo "CONTAINER SETTINGS"
 echo "=================="
 echo
 echo "  Container: ${CONTAINER}"
-echo
-echo "  Address:   ${DB_ADDR}"
 echo "  Port:      ${DB_PORT}"
+echo "  Database:  ${DB_NAME}"
 echo
 
 if [[ -n "${DB_NAME}" ]]
@@ -91,7 +89,7 @@ umask ${UMASK}
 #
 #
 
-CLI_OPTIONS="-v 3 -h ${DB_ADDR} -P ${DB_PORT} -u root -p ${DB_PASS}"
+CLI_OPTIONS="-v 3 -h ${CONTAINER} -P ${DB_PORT} -u root -p ${DB_PASS}"
 
 if [[ -n "${DB_NAME}" ]]
 then
