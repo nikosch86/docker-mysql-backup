@@ -7,16 +7,10 @@ set -e
 #
 
 MODE=${MODE:-BACKUP}
-TARBALL=${TARBALL:-}
 
 case "${MODE^^}" in
     'BACKUP')
-        if [[ "${TARBALL^^}" != "" ]]
-        then
-            OPTIONS="--outputdir=${TARBALL}"
-        else
-            OPTIONS=${OPTIONS:--c}
-        fi
+        OPTIONS=${OPTIONS:--c}
         ;;
     'RESTORE')
         OPTIONS=${OPTIONS:--o}
