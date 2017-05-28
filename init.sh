@@ -35,7 +35,7 @@ echo "  UID:                ${BACKUP_UID:=666}"
 echo "  GID:                ${BACKUP_GID:=666}"
 echo "  Umask:              ${UMASK:=0022}"
 echo
-echo "  Base directory: i   ${BASE_DIR:=/backup}"
+echo "  Base directory:     ${BASE_DIR:=/backup}"
 [[ "${MODE^^}" == "RESTORE" ]] && \
 echo "  Restore directory:  ${RESTORE_DIR}"
 echo
@@ -67,13 +67,13 @@ echo "=================="
 echo
 echo "  Container: ${CONTAINER}"
 echo
-echo "  Address:   ${!DB_ADDR}"
-echo "  Port:      ${!DB_PORT}"
+echo "  Address:   ${DB_ADDR}"
+echo "  Port:      ${DB_PORT}"
 echo
 
-if [[ -n "${!DB_NAME}" ]]
+if [[ -n "${DB_NAME}" ]]
 then
-    echo "  Database:  ${!DB_NAME}"
+    echo "  Database:  ${DB_NAME}"
     echo
 fi
 
@@ -91,11 +91,11 @@ umask ${UMASK}
 #
 #
 
-CLI_OPTIONS="-v 3 -h ${!DB_ADDR} -P ${!DB_PORT} -u root -p ${!DB_PASS}"
+CLI_OPTIONS="-v 3 -h ${DB_ADDR} -P ${DB_PORT} -u root -p ${DB_PASS}"
 
-if [[ -n "${!DB_NAME}" ]]
+if [[ -n "${DB_NAME}" ]]
 then
-    CLI_OPTIONS+=" -B ${!DB_NAME}"
+    CLI_OPTIONS+=" -B ${DB_NAME}"
 fi
 
 CLI_OPTIONS+=" ${OPTIONS}"
@@ -124,12 +124,7 @@ then
     echo "DONE"
 
     echo "===> Starting backup..."
-    if [[ "${TARBALL^^}" != "" ]]
-    then
-        exec su -pc "mydumper ${CLI_OPTIONS} && tar -czvf ${TARBALL}.gz ${TARBALL}" ${USER}
-    else
-        exec su -pc "mydumper ${CLI_OPTIONS}" ${USER}
-    fi
+    exec su -pc "mydumper ${CLI_OPTIONS}" ${USER}
 
 #
 # When MODE is set to "RESTORE", then myloader has to be used to restore the database.
@@ -142,27 +137,19 @@ then
     cd ${BASE_DIR}
     echo "DONE"
 
-    if [[ "${TARBALL^^}" != "" ]]
+    if [[ -z "${RESTORE_DIR}" ]]
     then
-        RESTORE_DIR=${TARBALL}
-        rm -rf ${RESTORE_DIR}
-        echo "===> Restoring database from ${RESTORE_DIR}..."
-        exec su -pc "tar -xvf ${TARBALL}.gz ${RESTORE_DIR} && myloader --directory=${RESTORE_DIR} ${CLI_OPTIONS}" ${USER}
-    else
-        if [[ -z "${RESTORE_DIR}" ]]
+        printf "===> No RESTORE_DIR set, trying to find latest backup... "
+        RESTORE_DIR=$(ls -t | head -1)
+        if [[ -n "${RESTORE_DIR}" ]]
         then
-            printf "===> No RESTORE_DIR set, trying to find latest backup... "
-            RESTORE_DIR=$(ls -t | head -1)
-            if [[ -n "${RESTORE_DIR}" ]]
-            then
-                echo "DONE"
-            else
-                echo "FAILED"
-                echo "ERROR: Auto detection of latest backup directory failed!" >&2
-                exit 1
-            fi
+            echo "DONE"
+        else
+            echo "FAILED"
+            echo "ERROR: Auto detection of latest backup directory failed!" >&2
+            exit 1
         fi
-        echo "===> Restoring database from ${RESTORE_DIR}..."
-        exec su -pc "myloader --directory=${RESTORE_DIR} ${CLI_OPTIONS}" ${USER}
     fi
+    echo "===> Restoring database from ${RESTORE_DIR}..."
+    exec su -pc "myloader --directory=${RESTORE_DIR} ${CLI_OPTIONS}" ${USER}
 fi
