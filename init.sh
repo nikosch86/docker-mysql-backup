@@ -8,7 +8,7 @@ set -e
 
 MODE=${MODE:-BACKUP}
 TARBALL=${TARBALL:-}
- 
+
 case "${MODE^^}" in
     'BACKUP')
         if [[ "${TARBALL^^}" != "" ]]
@@ -53,7 +53,7 @@ echo
 # Display the container informations on standard out.
 #
 
-CONTAINER=$(export | sed -nr "/ENV_MYSQL_ROOT_PASSWORD/{s/^.+ -x (.+)_ENV.+/\1/p;q}")
+CONTAINER=${MYSQL_CONTAINER:-mysql}
 
 if [[ -z "${CONTAINER}" ]]
 then
@@ -63,10 +63,10 @@ then
     exit 1
 fi
 
-DB_PORT=$(export | sed -nr "/-x ${CONTAINER}_PORT_[[:digit:]]+_TCP_PORT/{s/^.+ -x (.+)=.+/\1/p}")
-DB_ADDR="${CONTAINER}_PORT_${!DB_PORT}_TCP_ADDR"
-DB_NAME="${CONTAINER}_ENV_MYSQL_DATABASE"
-DB_PASS="${CONTAINER}_ENV_MYSQL_ROOT_PASSWORD"
+DB_PORT=${MYSQL_PORT:-3306}
+DB_ADDR="${CONTAINER}"
+DB_NAME="${MYSQL_DATABASE}"
+DB_PASS="${MYSQL_ROOT_PASSWORD}"
 
 echo "CONTAINER SETTINGS"
 echo "=================="
@@ -97,7 +97,7 @@ umask ${UMASK}
 #
 #
 
-CLI_OPTIONS="-v 3 -h ${!DB_ADDR} -P ${!DB_PORT} -u root -p ${!DB_PASS}" 
+CLI_OPTIONS="-v 3 -h ${!DB_ADDR} -P ${!DB_PORT} -u root -p ${!DB_PASS}"
 
 if [[ -n "${!DB_NAME}" ]]
 then
