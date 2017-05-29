@@ -31,8 +31,8 @@ echo "${MODE} SETTINGS"
 echo "================"
 echo
 echo "  User:               ${USER}"
-echo "  UID:                ${BACKUP_UID:=666}"
-echo "  GID:                ${BACKUP_GID:=666}"
+echo "  UID:                ${BACKUP_UID:=1000}"
+echo "  GID:                ${BACKUP_GID:=1000}"
 echo "  Umask:              ${UMASK:=0022}"
 echo
 echo "  Base directory:     ${BASE_DIR:=/backup}"
@@ -58,20 +58,18 @@ then
 fi
 
 DB_PORT=${MYSQL_PORT:-3306}
-DB_NAME="${MYSQL_DATABASE}"
-DB_PASS="${MYSQL_ROOT_PASSWORD}"
 
 echo "CONTAINER SETTINGS"
 echo "=================="
 echo
 echo "  Container: ${CONTAINER}"
 echo "  Port:      ${DB_PORT}"
-echo "  Database:  ${DB_NAME}"
+echo "  Database:  ${MYSQL_DATABASE}"
 echo
 
-if [[ -n "${DB_NAME}" ]]
+if [[ -n "${MYSQL_DATABASE}" ]]
 then
-    echo "  Database:  ${DB_NAME}"
+    echo "  Database:  ${MYSQL_DATABASE}"
     echo
 fi
 
@@ -89,11 +87,11 @@ umask ${UMASK}
 #
 #
 
-CLI_OPTIONS="-v 3 -h ${CONTAINER} -P ${DB_PORT} -u root -p ${DB_PASS}"
+CLI_OPTIONS="-v 3 -h ${CONTAINER} -P ${DB_PORT} -u root -p ${MYSQL_ROOT_PASSWORD}"
 
-if [[ -n "${DB_NAME}" ]]
+if [[ -n "${MYSQL_DATABASE}" ]]
 then
-    CLI_OPTIONS+=" -B ${DB_NAME}"
+    CLI_OPTIONS+=" -B ${MYSQL_DATABASE}"
 fi
 
 CLI_OPTIONS+=" ${OPTIONS}"
