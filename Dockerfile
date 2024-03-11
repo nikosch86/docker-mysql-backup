@@ -1,4 +1,4 @@
-FROM debian:9
+FROM debian:12
 
 RUN \
     groupadd -g 666 mybackup && \
