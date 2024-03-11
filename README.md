@@ -1,109 +1,71 @@
 About
 =====
 
-The mysql-backup Docker image will provide you a container to backup and restore a [MySQL](https://hub.docker.com/_/mysql/) or [MariaDB](https://hub.docker.com/_/mariadb/) database container.
+The docker-mysql-backup image is meant to be run alongside a deployment that features a mysql/mariadb container that needs to be backed up.
 
-The backup is made with [mydumper](http://centminmod.com/mydumper.html), a fast MySQL backup utility.
+The backup is performed using  [mydumper](http://centminmod.com/mydumper.html), a fast MySQL backup utility.
 
 Usage
 =====
 
-To backup a [MySQL](https://hub.docker.com/_/mysql/) or [MariaDB](https://hub.docker.com/_/mariadb/) container you simply have to run a container from this Docker image and link a MySQL or MariaDB container to it.
-
-The container will automatically detect the linked database container and tries to backup the database based on the environment variables of the database container:
-
-* `<CONTAINER>_ENV_MYSQL_DATABASE`
-* `<CONTAINER>_ENV_MYSQL_ROOT_PASSWORD`
-
-Please note the backup will be written to `/backup` by default, so you might want to mount that directory from your host.
-
-Example Docker CLI client
--------------------------
-
-To __create a backup__ from a MySQL container via `docker` CLI client:
-
-```bash
-docker run --name my-backup --link my-mysql -v /var/mysql_backups:/backup confirm/mysql-backup
+Add a service to your docker-compose file like so:
 ```
+version: '2'
 
-The container will stop automatically as soon as the backup has finished.
-To create more backups in the future simply start your container again:
+volumes:
+  db-data:
 
-```bash
-docker start my-backup
-```
-
-To __restore a backup__ into a MySQL container via `docker` CLI client:
-
-```bash
-docker run --name my-restore --link my-mysql -v /var/mysql_backups:/backup confirm/mysql-backup
-```
-
-Example Docker Compose
-----------------------
-
-Here's an example of a [Docker Compose](https://docs.docker.com/compose/) file, e.g. `docker-compose.yml`:
-
-```yaml
-backup:
-    image: confirm/mysql-backup
+services:
+  mysql:
+    image: mysql
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+    restart: unless-stopped
+    ports:
+      - 3406:3306
+  backup:
+    image: nikosch86/docker-mysql-backup:develop
     volumes:
         - ./data/backup:/backup
-    links:
-        - my-mysql
-    restart: never
+    environment:
+      - MYSQL_ROOT_PASSWORD
 ```
 
-Configuration
-=============
+as you can see it is best practice to store your mysql secrets in a .env file, so both containers have access to it  
+the minimal viable configuration just needs the root password, it will backup all databases and look for a container named `mysql` on port `3306`  
+be aware, the backup container will create the folder `/backup` and use `UID` and `GID` 1000 to own it.  
+That means any folder mounted to the `/backup` location will be affected by that.  
 
-Mode
-----
+additional configuration can be done by using these environment variables:  
 
-By default the container backups the database.
-However, you can change the mode of the container by setting the following environment variable:
+* `MYSQL_CONTAINER`
+* `MYSQL_PORT`
+* `MYSQL_DATABASE`
+* `BACKUP_UID`
+* `BACKUP_GID`
+* `UMASK`
+* `BASE_DIR`
+* `MODE`
+* `RESTORE_DIR`
+* `OPTIONS`
 
-* `MODE`: Sets the mode of the backup container while [`BACKUP`|`RESTORE`]
+`BASE_DIR` is the directory the backups will be written to inside the container.  
 
-Base directory
---------------
+setting `OPTIONS` will override the options set for `mydumper` / `myloader`  
 
-By default the base directory `/backup` is used.
-However, you can overwrite that by setting the following environment variable:
+The container will stop automatically as soon as the backup is done.
+To start backing up you need to start the container.  
 
-* `BASE_DIR`: Path of the base directory (aka working directory)
+`docker-compose up -d backup`
 
-Restory directory
------------------
+__restore__
 
-By default the container will automatically restore the latest backup found in `BASE_DIR`.
-However, you can manually set the name of a backup directory underneath `BASE_DIR`:
-
-* `RESTORE_DIR`: Name of a backup directory to restore
-
-_This option is only required when the container runs in in `RESTORE` mode._
-
-UID and GID
------------
-
-By default the backup will be written with UID and GID `666`.
-However, you can overwrite that by setting the following environment variables:
-
-* `BACKUP_UID`: UID of the backup
-* `BACKUP_GID`: GID of the backup
-
-umask
------
-
-By default a `umask` of `0022` will be used.
-However, you can overwrite that by setting the following environment variable:
-
-* `UMASK`: Umask which should be used to write the backup files
-
-mydumper / myloader CLI options
--------------------------------
-
-By default `mydumper` is invoked with the `-c` (compress backup) and `myloader` with the `-o` (overwrite tables) CLI option.
-However, you can modify the CLI options by setting the following environment variable:
-
-* `OPTIONS`: Options passed to `mydumper` (when `MODE` is `BACKUP`) or `myloader` (when `MODE` is `RESTORE`)
+To restore a backup, the environment variable `MODE` needs to be set to `RESTORE`  
+`RESTORE_DIR` needs to be set to the directory of your backup  
+Starting the container will use `myload` to restore the specified backup into the  
+specified container and database  

@@ -7,7 +7,7 @@ set -e
 #
 
 MODE=${MODE:-BACKUP}
- 
+
 case "${MODE^^}" in
     'BACKUP')
         OPTIONS=${OPTIONS:--c}
@@ -31,11 +31,11 @@ echo "${MODE} SETTINGS"
 echo "================"
 echo
 echo "  User:               ${USER}"
-echo "  UID:                ${BACKUP_UID:=666}"
-echo "  GID:                ${BACKUP_GID:=666}"
+echo "  UID:                ${BACKUP_UID:=1000}"
+echo "  GID:                ${BACKUP_GID:=1000}"
 echo "  Umask:              ${UMASK:=0022}"
 echo
-echo "  Base directory: i   ${BASE_DIR:=/backup}"
+echo "  Base directory:     ${BASE_DIR:=/backup}"
 [[ "${MODE^^}" == "RESTORE" ]] && \
 echo "  Restore directory:  ${RESTORE_DIR}"
 echo
@@ -47,7 +47,7 @@ echo
 # Display the container informations on standard out.
 #
 
-CONTAINER=$(export | sed -nr "/ENV_MYSQL_DATABASE/{s/^.+ -x (.+)_ENV.+/\1/p;q}")
+CONTAINER=${MYSQL_CONTAINER:-mysql}
 
 if [[ -z "${CONTAINER}" ]]
 then
@@ -57,21 +57,21 @@ then
     exit 1
 fi
 
-DB_PORT=$(export | sed -nr "/-x ${CONTAINER}_PORT_[[:digit:]]+_TCP_PORT/{s/^.+ -x (.+)=.+/\1/p}")
-DB_ADDR="${CONTAINER}_PORT_${!DB_PORT}_TCP_ADDR"
-DB_NAME="${CONTAINER}_ENV_MYSQL_DATABASE"
-DB_PASS="${CONTAINER}_ENV_MYSQL_ROOT_PASSWORD"
+DB_PORT=${MYSQL_PORT:-3306}
 
 echo "CONTAINER SETTINGS"
 echo "=================="
 echo
 echo "  Container: ${CONTAINER}"
+echo "  Port:      ${DB_PORT}"
+echo "  Database:  ${MYSQL_DATABASE}"
 echo
-echo "  Address:   ${!DB_ADDR}"
-echo "  Port:      ${!DB_PORT}"
-echo
-echo "  Database:  ${!DB_NAME}"
-echo
+
+if [[ -n "${MYSQL_DATABASE}" ]]
+then
+    echo "  Database:  ${MYSQL_DATABASE}"
+    echo
+fi
 
 #
 # Change UID / GID of backup user and settings umask.
@@ -85,8 +85,16 @@ umask ${UMASK}
 #
 # Building common CLI options to use for mydumper and myloader.
 #
+#
 
-CLI_OPTIONS="-v 3 -h ${!DB_ADDR} -P ${!DB_PORT} -u root -p ${!DB_PASS} -B ${!DB_NAME} ${OPTIONS}"
+CLI_OPTIONS="-v 3 -h ${CONTAINER} -P ${DB_PORT} -u root -p ${MYSQL_ROOT_PASSWORD}"
+
+if [[ -n "${MYSQL_DATABASE}" ]]
+then
+    CLI_OPTIONS+=" -B ${MYSQL_DATABASE}"
+fi
+
+CLI_OPTIONS+=" ${OPTIONS}"
 
 #
 # When MODE is set to "BACKUP", then mydumper has to be used to backup the database.
@@ -138,8 +146,6 @@ then
             exit 1
         fi
     fi
-
     echo "===> Restoring database from ${RESTORE_DIR}..."
     exec su -pc "myloader --directory=${RESTORE_DIR} ${CLI_OPTIONS}" ${USER}
-
 fi
