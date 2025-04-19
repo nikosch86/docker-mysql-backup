@@ -10,8 +10,6 @@ Usage
 
 Add a service to your docker-compose file like so:
 ```
-version: '2'
-
 volumes:
   db-data:
 
