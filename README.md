@@ -59,7 +59,7 @@ setting `OPTIONS` will override the options set for `mydumper` / `myloader`
 The container will stop automatically as soon as the backup is done.
 To start backing up you need to start the container.  
 
-`docker-compose up -d backup`
+`docker compose up -d backup`
 
 __restore__
 
