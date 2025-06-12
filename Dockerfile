@@ -1,5 +1,7 @@
 FROM debian:12
 
+ENV UPDATED_AT=20250612
+
 RUN \
     groupadd -g 666 mybackup && \
     useradd -u 666 -g 666 -d /backup -c "MySQL Backup User" mybackup
